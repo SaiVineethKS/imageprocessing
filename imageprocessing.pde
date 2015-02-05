@@ -89,7 +89,7 @@ void drawLines(){
     // lines include angle in radians, measured in double precision
     // so we can select out vertical and horizontal lines
     // They also include "start" and "end" PVectors with the position
-    println(degrees((float)line.angle));
+    //println(degrees((float)line.angle));
     /*if (line.angle >= radians(0) && line.angle < radians(1)) {
       stroke(0, 255, 0);
       line(line.start.x, line.start.y, line.end.x, line.end.y);
@@ -102,6 +102,8 @@ void drawLines(){
     
     //Find angle from ofek
     stroke(0, 255, 0);
+      
       line(line.start.x, line.start.y, line.end.x, line.end.y);
-  } 
+  }
+  
 }
