@@ -6,9 +6,55 @@ PImage img;
 OpenCV opencv;
 Histogram histogram;
 Capture video;
-int lowerb = 16;//18
-int upperb = 30;//55
+int lowerb = 116;//18
+int upperb = 124;//55
 ArrayList<Line> lines;
+
+
+
+PImage ncc(PImage img){
+  img.loadPixels();
+  float avgR = 0;
+  float avgG = 0;
+  float avgB = 0;
+  for(int i =0; i < img.width * img.height; i++){
+   color c = img.pixels[i];
+   float red = red(c);
+   float green = green(c);
+   float blue = blue(c);
+   avgR+=red;
+   avgG+=green;
+   avgB+=blue;  
+  }
+  avgR/=img.width * img.height;
+  avgG/=img.width * img.height;
+  avgB/=img.width * img.height;
+  float stdR = 0;
+  float stdG = 0;
+  float stdB = 0;
+  for(int i =0; i < img.width * img.height; i++){
+    color c = img.pixels[i];
+   float red = red(c);
+   float green = green(c);
+   float blue = blue(c);
+   stdR += (red-avgR)*(red-avgR);
+   stdG += (green-avgG)*(green-avgG);
+   stdB += (blue-avgB)*(blue-avgB);
+  }
+  stdR/=(img.width * img.height)*(img.width * img.height);
+  stdG/=(img.width * img.height)*(img.width * img.height);
+  stdB/=(img.width * img.height)*(img.width * img.height);
+  PImage result = createImage(img.width, img.height, RGB);
+  for(int i =0; i < img.width * img.height; i++){
+    color c = img.pixels[i];
+   float red = (red(c)-avgR)/stdR;
+   float green = (green(c)-avgG)/stdG;
+   float blue = (blue(c)-avgB)/stdB;
+   result.pixels[i] = color(red, green, blue);
+  }
+  result.updatePixels();
+  return result;
+}
 
 void setup() {
   video = new Capture(this, 640, 480);
@@ -21,13 +67,13 @@ void setup() {
 }
 
 void draw() {
-  background(100);
+  
   if (video.available()) {
+    background(100);
     video.read();
-  }
-
+  img = ncc(video);
   // <2> Load the new frame of our movie in to OpenCV
-  opencv.loadImage(video);
+  opencv.loadImage(img);
   //opencv.loadImage(img);
   //image(opencv.getSnapshot(), 0, 0); 
   // opencv.blur(100);  
@@ -41,7 +87,7 @@ void draw() {
   opencv.threshold(230);
   opencv.dilate();
   opencv.dilate();
-  opencv.dilate();
+  opencv.dilate();//wtf
   opencv.dilate();
   opencv.dilate();
   opencv.dilate();
@@ -52,7 +98,7 @@ void draw() {
   opencv.blur(2);//These clean 
   opencv.dilate();
   histogram = opencv.findHistogram(opencv.getH(), 255);
-  lines = opencv.findLines(100, 40, 5);
+  lines = opencv.findLines(100, 40, 50);
   
     
   
@@ -74,6 +120,7 @@ void draw() {
   ellipse(ub+10, height-30, 3, 3 );
   text(upperb, ub+10, height-15);
   drawLines();
+  }
 }
 
 /*void mouseMoved() {
@@ -93,9 +140,10 @@ void draw() {
 }*/
 
 void mousePressed() {
-    color c = get(mouseX, mouseY);
+    //color c = get(mouseX, mouseY);
+    color c = img.get(mouseX, mouseY);
     int hue = int(map(hue(c), 0, 255, 0, 180));
-    int range = 7;
+    int range = 4;
     upperb = hue+range;
     lowerb = hue-range;
 }
@@ -105,43 +153,85 @@ void mousePressed() {
 void drawLines(){
   Line twidth = null;
   Line theight = null;
+  Line tside = null;
   for (Line line : lines) {
-    // lines include angle in radians, measured in double precision
-    // so we can select out vertical and horizontal lines
-    // They also include "start" and "end" PVectors with the position
-    //println(degrees((float)line.angle));
-    /*if (line.angle >= radians(0) && line.angle < radians(1)) {
-      stroke(0, 255, 0);
-      line(line.start.x, line.start.y, line.end.x, line.end.y);
-    }
-    if (line.angle > radians(89) && line.angle < radians(91)) {
-      stroke(255, 0, 0);
-      line(line.start.x, line.start.y, line.end.x, line.end.y);
-    }*/
-    
-    if(inRange(errorAngle(degrees((float)line.angle), 0), -45, 45)){//width
-      if(twidth == null) twidth = line;
-      if(distance(line) > distance(twidth)) twidth = line;
-      stroke(255, 0, 0);
-    }
-    else {//height
-    if(theight == null) theight = line;
-    if(distance(line) > distance(theight)) theight = line;
-      stroke(0, 255, 0);
-    }
-    //line(line.start.x, line.start.y, line.end.x, line.end.y);
-    //println(distance(line));
+
+  if(inRange(errorAngle(degrees((float)line.angle),0) , -12, 12)){//height
+    if(theight == null)
+      theight = line;
+    if(distance(line) > distance(theight))
+      theight = line;
   }
+  /*else{//width
+    if(twidth == null)
+      twidth = line;
+    if(distance(line) > distance(twidth))
+      twidth = line;
+  }*/
+    
+  }
+  if(theight != null)
+  for(Line line: lines){
+    if(!inRange(errorAngle(degrees((float)line.angle),0) , -12, 12) && middle(line).y>middle(theight).y){//width. bigger and not msaller because reverse starting point of cooardinates.
+    if(twidth == null)
+      twidth = line;
+    if(distance(line) > distance(twidth))
+      twidth = line;
+    }
+    //println("height: " + abs(theight.end.y-theight.start.y));
+    float heightOfTote = abs(theight.end.y-theight.start.y);
+    float distance = 10404*pow(heightOfTote, -0.88);
+    //println(distance);
+    
+  }
+  if(twidth != null && theight != null)
+  for(Line line: lines){
+     if(errorAngle(degrees((float)line.angle), degrees((float)twidth.angle)) > 20 && !inRange(errorAngle(degrees((float)line.angle),0) , -12, 12) && abs(middle(line).y-middle(twidth).y) < distance(theight)*0.8){
+       if(tside == null)
+         tside = line;
+       if(distance(line) > distance(tside))
+         tside = line;
+     }
+  }
+  if(twidth!=null&&tside!=null){
+     
+     float ratio = errorAngle(degrees((float)tside.angle), degrees((float)twidth.angle));
+     float angle = -0.083*ratio*ratio+2.666*ratio+40;
+     Line left;
+     Line right;
+     if(isLeft(tside, twidth)){
+      left = tside;
+      right = twidth; 
+     }else{
+      left = twidth;
+      right = tside; 
+     }
+     println(isShorterX(left, right));
+  }
+  
+  
+  //draw
   if(twidth != null){
     stroke(255, 0, 0);
-    println(degrees((float)twidth.angle));
+    //println(degrees((float)twidth.angle));
     line(twidth.start.x, twidth.start.y, twidth.end.x, twidth.end.y);
   }
+  
+  if(tside != null){
+    stroke(0, 0, 255);
+    //println(degrees((float)tside.angle));
+    //println(errorAngle(degrees((float)twidth.angle), degrees((float)tside.angle)));
+    line(tside.start.x, tside.start.y, tside.end.x, tside.end.y);
+  }
+  
   if(theight != null){
     stroke(0, 255, 0);
+    //println(degrees((float)theight.angle));
+    
     //println(errorAngle(degrees((float)theight.angle), 0));
     line(theight.start.x, theight.start.y, theight.end.x, theight.end.y);
   }
+  
 }
 
 
@@ -149,14 +239,31 @@ float distance(Line line){
   return sqrt((line.start.x-line.end.x)*(line.start.x-line.end.x)+(line.start.y-line.end.y)*(line.start.y-line.end.y));
 }
 
+Point middle(Line line){
+  return new Point((int)(line.start.x+line.end.x)/2, (int)(line.start.y+line.end.y)/2);
+}
+//middle y cant be largr than a*height. a<=1
+float distance(Point p1, Point p2){
+  return sqrt((p2.x-p1.x)*(p2.x-p1.x)+(p2.y-p1.y)*(p2.y-p1.y)); 
+}
+
 boolean inRange(double num, double lower, double upper){
  return num <= upper && num >= lower ;
 }
 
-double errorAngle(float angle1, float angle2){
- while(abs(angle1-angle2) > abs(angle1-180-angle2)) {
-  angle1 -= 180; 
+float errorAngle(float angle1, float angle2){
+  float minAngle = min(angle1, angle2);
+  float maxAngle = max(angle1, angle2);
+ while(abs(maxAngle-minAngle) > abs(maxAngle-180-minAngle)) {
+  maxAngle -= 180; 
  }
- return angle2-angle1;
+ return minAngle-maxAngle;
 }
 
+boolean isLeft(Line l1, Line l2){
+  return middle(l1).x < middle(l2).x; 
+}
+
+boolean isShorterX(Line l1, Line l2){
+  return abs(l1.end.x-l1.start.x) < abs(l2.end.x-l2.start.x);
+}
