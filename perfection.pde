@@ -13,7 +13,6 @@ ArrayList<Line> lines;
 ArrayList<Contour> contours;
 float angles[] = new float[5];
 
-
 PImage ncc(PImage img){
   img.loadPixels();
   
@@ -173,6 +172,7 @@ void draw() {
     histogram = opencv.findHistogram(opencv.getH(), 255);
     drawHistogram();
     drawLines();
+    
   }
   }
   
@@ -251,8 +251,10 @@ void drawLines(){
   }*/
     
   }
+  String send = "";
   fill(0, 255, 0);
   textSize(32);
+  float distance = -1;
   if(theight != null)
   for(Line line: lines){
     if(!inRange(errorAngle(degrees((float)line.angle),0) , -12, 12) && middle(line).y>middle(theight).y){//width. bigger and not ssaller because reverse starting point of cooardinates.
@@ -263,11 +265,14 @@ void drawLines(){
     }
     //println("height: " + abs(theight.end.y-theight.start.y));
     float heightOfTote = abs(theight.end.y-theight.start.y);
-    float distance = 10404*pow(heightOfTote, -0.88);
-    text("Distance " + distance, 20, 40);
+    distance = 10404*pow(heightOfTote, -0.88);
+    
+    
     //println(distance);
     
   }
+  text("Distance " + distance, 20, 40);
+    send =distance + " ";
   if(twidth != null && theight != null)
   for(Line line: lines){
      if(abs(errorAngle(degrees((float)line.angle), degrees((float)twidth.angle))) > 15 && !inRange(errorAngle(degrees((float)line.angle),0) , -12, 12) && abs(middle(line).y-middle(twidth).y) < distance(theight)*0.9){
@@ -287,7 +292,7 @@ void drawLines(){
   tote.copy(leftX, highY, rightX-leftX, highY-lowY, 0, 0, rightX-leftX, highY-lowY);
   println(tote.width);
   }*/
-  float angle = 0;
+  float angle = -1;
   if(twidth!=null&&tside!=null){
      
      float ratio = errorAngle(degrees((float)tside.angle), degrees((float)twidth.angle));
@@ -328,13 +333,16 @@ void drawLines(){
    } 
   }
   text("Angle " + angle, 20, 80);
+  send+=angle + " ";
+  float x = -1;
   if(twidth!=null&&tside!=null){
-    float x = map(width/2-(middle(twidth).x+middle(tside).x)/2, -width/2, width/2, -1, 1);
-     text("Distance to center " + x, 20, 120);
+    x = map(width/2-(middle(twidth).x+middle(tside).x)/2, -width/2, width/2, -100, 100);
   }else if(twidth != null){
-   float x = map(width/2-middle(twidth).x, -width/2, width/2, -1, 1);
-     text("Distance to center " + x, 20, 120);
+    x = map(width/2-middle(twidth).x, -width/2, width/2, -100, 100);
   }
+  text("Distance from center " + x, 20, 120);
+  send+=x;
+  println(send);
   //draw
   if(twidth != null){
     stroke(255, 0, 0);
@@ -356,7 +364,7 @@ void drawLines(){
     //println(errorAngle(degrees((float)theight.angle), 0));
     line(theight.start.x, theight.start.y, theight.end.x, theight.end.y);
   }
-  
+  //println(send);
 }
 
 PVector getLeftPoint(Line line)
