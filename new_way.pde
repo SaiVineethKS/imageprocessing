@@ -3,17 +3,24 @@ import gab.opencv.*;
 import processing.video.*;
 import java.awt.Point;
 import java.awt.Rectangle;
+import processing.net.*; 
+import java.util.Arrays;
+
+ArrayList<Contour> contours;
+ArrayList<Contour> polygons;
+ArrayList<Line> lines;
+Client myClient; 
 PImage img;
 OpenCV opencv;
 Histogram histogram;
 Capture video;
-int lowerb = 116;//18 
-int upperb = 124;//55 //124
-ArrayList<Line> lines;
-ArrayList<Contour> contours;
+int lowerb = 105;//18 
+int upperb = 115;//55 //124
+float angles[] = new float[5];
 
 PImage ncc(PImage img){
   img.loadPixels();
+  
   float avgR = 0;
   float avgG = 0;
   float avgB = 0;
@@ -45,21 +52,37 @@ PImage ncc(PImage img){
   stdG/=(img.width * img.height)*(img.width * img.height);
   stdB/=(img.width * img.height)*(img.width * img.height);
   PImage result = createImage(img.width, img.height, RGB);
+  float minR = 255, maxR = -255;
+  float minG = 255, maxG = -255;
+  float minB = 255, maxB = -255;
   for(int i =0; i < img.width * img.height; i++){
     color c = img.pixels[i];
    float red = (red(c)-avgR)/stdR;
    float green = (green(c)-avgG)/stdG;
    float blue = (blue(c)-avgB)/stdB;
-   red = constrain(red, 0, 255);
-   green = constrain(green, 0, 255);
-   blue = constrain(blue, 0, 255);
-   result.pixels[i] = color(red, green, blue);
+   minR = min(minR, red);
+     maxR = max(maxR, red);
+     minG = min(minG, red);
+     maxG = max(maxG, red);
+     minB = min(minB, red);
+     maxB = max(maxB, red);
+  }
+  for(int i =0; i < img.width * img.height; i++){
+    color c = img.pixels[i];
+   float red = (red(c)-avgR)/stdR;
+   float green = (green(c)-avgG)/stdG;
+   float blue = (blue(c)-avgB)/stdB;
+   float newR = map(red, minR, maxR, 0, 255);
+   float newG = map(green, minG, maxG, 0, 255);
+   float newB = map(blue, minB, maxB, 0, 255);
+    result.pixels[i] = color(newR, newG, newB);
   }
   result.updatePixels();
   return result;
 }
 
 void setup() {
+  myClient = new Client(this, "localhost", 5204); 
   frameRate(20);
   video = new Capture(this, 640, 480);
   img = loadImage("tote.jpg");
@@ -96,11 +119,52 @@ void draw() {
   opencv.dilate();
   opencv.dilate();
   image(img, 0, 0);
-  
   image(opencv.getOutput(), 3*width/4, 3*height/4, width/4,height/4);
+  contours = opencv.findContours();
+  //Point[] points = new Point()[counters.legnth*2]
+  int numOfPoints = 0;
+  for (Contour contour : contours) {
+    // stroke(0, 255, 0);
+    //contour.draw();
+    
+    stroke(255, 255, 0);
+    beginShape();
+    for (PVector point : contour.getPolygonApproximation().getPoints()) {
+      numOfPoints++;
+      vertex(point.x, point.y);
+    }
+    endShape();
+  }
+  Point[] points = new Point[numOfPoints];
+  int counter = 0;  
+  for (Contour contour : contours) {
+    // stroke(0, 255, 0);
+    //contour.draw();
+    
+    //stroke(255, 255, 0);
+    //beginShape();
+    for (PVector point : contour.getPolygonApproximation().getPoints()) {
+      points[counter] = new Point((int)point.x, (int)point.y);
+      //vertex(point.x, point.y);
+      counter++;
+    }
+    //endShape();
+  }
+  points = convexHull(points);
+  stroke(255, 255, 0);
+  beginShape();
+  for(int i = 0; i<points.length; i++){
+    vertex(points[i].x, points[i].y);
+  }
+  endShape();
   opencv.findCannyEdges(2,10);//edge
+  
     opencv.blur(2);//These clean 
     opencv.dilate();
+    opencv.dilate();
+    opencv.dilate();
+    opencv.blur(2);
+    
   //image(img, 0, 0);
   
   
@@ -127,7 +191,7 @@ void draw() {
     
     //println(rectWidth);
     //rect(x, y, rectWidth, rectHeight);
-    //PImage tote = img.get(x, y, rectWidth, rectHeight);
+    PImage tote = img.get(x, y, rectWidth, rectHeight);
     //tote = ncc(tote);
     /*image(tote, x, y);
     opencv.loadImage(tote);
@@ -151,10 +215,11 @@ void draw() {
     opencv.blur(2);//These clean 
     opencv.dilate();*/
     
-    lines = opencv.findLines(100, 40, 50);
+    lines = opencv.findLines(100, 1, 10);
     histogram = opencv.findHistogram(opencv.getH(), 255);
     drawHistogram();
     drawLines();
+    
   }
   }
   
@@ -206,7 +271,7 @@ void mousePressed() {
     //color c = get(mouseX, mouseY);
     color c = img.get(mouseX, mouseY);
     int hue = int(map(hue(c), 0, 255, 0, 180));
-    int range = 2;
+    int range = 9;
     upperb = hue+range;
     lowerb = hue-range;
 }
@@ -233,11 +298,13 @@ void drawLines(){
   }*/
     
   }
+  String send = "";
   fill(0, 255, 0);
   textSize(32);
+  float distance = -1;
   if(theight != null)
   for(Line line: lines){
-    if(!inRange(errorAngle(degrees((float)line.angle),0) , -12, 12) && middle(line).y>middle(theight).y){//width. bigger and not msaller because reverse starting point of cooardinates.
+    if(!inRange(errorAngle(degrees((float)line.angle),0) , -12, 12) && middle(line).y>middle(theight).y*1.2){//width. bigger and not ssaller because reverse starting point of cooardinates.
     if(twidth == null)
       twidth = line;
     if(distance(line) > distance(twidth))
@@ -245,20 +312,23 @@ void drawLines(){
     }
     //println("height: " + abs(theight.end.y-theight.start.y));
     float heightOfTote = abs(theight.end.y-theight.start.y);
-    float distance = 10404*pow(heightOfTote, -0.88);
-    text("Distance " + distance, 20, 40);
+    distance = 10404*pow(heightOfTote, -0.88);
+    
+    
     //println(distance);
     
   }
+  text("Distance " + distance, 20, 40);
+    send =distance + " ";
   if(twidth != null && theight != null)
   for(Line line: lines){
-     if(errorAngle(degrees((float)line.angle), degrees((float)twidth.angle)) > 20 && !inRange(errorAngle(degrees((float)line.angle),0) , -12, 12) && abs(middle(line).y-middle(twidth).y) < distance(theight)*0.8){
+     if(abs(errorAngle(degrees((float)line.angle), degrees((float)twidth.angle))) > 15 && !inRange(errorAngle(degrees((float)line.angle),0) , -12, 12) && abs(middle(line).y-middle(twidth).y) < distance(theight)*0.9){
        if(tside == null)
          tside = line;
        if(distance(line) > distance(tside))
          tside = line;
      }
-  }
+  }// 23 0 24 24 0 0 
   /*if(twidth != null && theight != null && tside != null){
   int leftX = (int)min(getLeftPoint(twidth).x, getLeftPoint(tside).x);
   int rightX = (int)max(getRightPoint(twidth).x, getRightPoint(tside).x);
@@ -269,18 +339,56 @@ void drawLines(){
   tote.copy(leftX, highY, rightX-leftX, highY-lowY, 0, 0, rightX-leftX, highY-lowY);
   println(tote.width);
   }*/
-  float angle = 0;
+  float angle = -1;
   if(twidth!=null&&tside!=null){
      
      float ratio = errorAngle(degrees((float)tside.angle), degrees((float)twidth.angle));
      angle = -0.083*ratio*ratio+2.666*ratio+40;
-  }else if(twidth!=null & theight!=null){
+  }else if(twidth!=null && theight!=null){
       float ratio = distance(theight)/distance(twidth);
-      if(ratio > 0.7) angle = 0;
-      else angle = 90;
+      if(ratio > 0.7){
+        angle = 0;
+      }
+      else{
+        angle = 90;
+      }
+      
   }
-  
-  text("Angle " + angle, 20, 100);
+  if(twidth!=null){
+    
+  }
+  float[] copy = new float[angles.length];
+  for(int i = 0; i < copy.length; i++){
+    copy[i] = angles[i];
+  }
+  for(int i = 1; i < angles.length; i++){
+    angles[i] = copy[i-1];
+  }
+  angles[0] = angle;
+  float sum = 0;
+  for(int i = 0; i < angles.length; i++){
+    sum += angles[i];
+  }
+  angle = 0;
+  if(sum/angles.length > 10){
+    
+   for(int i = 0; i < angles.length; i++){
+      if(angles[i] > 10){
+       angle = angles[i];
+      break; 
+      }
+   } 
+  }
+  text("Angle " + angle, 20, 80);
+  send+=angle + " ";
+  float x = -1;
+  if(twidth != null){
+    x = map(width/2-middle(twidth).x, -width/2, width/2, -100, 100);
+  }
+  text("Distance from center " + x, 20, 120);
+  send+=x;
+  println(send);
+  myClient.write(send); 
   //draw
   if(twidth != null){
     stroke(255, 0, 0);
@@ -302,7 +410,7 @@ void drawLines(){
     //println(errorAngle(degrees((float)theight.angle), 0));
     line(theight.start.x, theight.start.y, theight.end.x, theight.end.y);
   }
-  
+  //println(send);
 }
 
 PVector getLeftPoint(Line line)
@@ -353,4 +461,60 @@ boolean isLeft(Line l1, Line l2){
 boolean isShorterX(Line l1, Line l2){
   return abs(l1.end.x-l1.start.x) < abs(l2.end.x-l2.start.x);
 }
+int cross(Point O, Point A, Point B) {
+    return (A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x);
+  }
+  
+Point[] convexHull(Point[] P) {
+   println(P.length);
+    if (P.length > 1) {
+      int n = P.length, k = 0;
+      Point[] H = new Point[2 * n];
+ 
+      BubbleSort(P);
+ 
+      // Build lower hull
+      for (int i = 0; i < n; ++i) {
+        while (k >= 2 && cross(H[k - 2], H[k - 1], P[i]) <= 0)
+          k--;
+        H[k++] = P[i];
+      }
+ 
+      // Build upper hull
+      for (int i = n - 2, t = k + 1; i >= 0; i--) {
+        while (k >= t && cross(H[k - 2], H[k - 1], P[i]) <= 0)
+          k--;
+        H[k++] = P[i];
+      }
+      if (k > 1) {
+        H = Arrays.copyOfRange(H, 0, k - 1); // remove non-hull vertices after k; remove k - 1 which is a duplicate
+      }
+      return H;
+    } else if (P.length <= 1) {
+      return P;
+    } else{
+      return null;
+    }
+  }
+  
+  
+  
+void BubbleSort(Point[] points) {
+ for (int i = 0; i < points.length; i++) {
+    for (int x = 1; x < points.length - i; x++) {
+        if (compareTo(points[x-1], points[x]) < 0) {
+            Point temp = points[x - 1];
+            points[x - 1] = points[x];
+            points[x] = temp;
+        }
+    }
+  }
+}
 
+int compareTo(Point p1, Point p2) {
+    if (p1.x == p2.x) {
+      return p1.y - p2.y;
+    } else {
+      return p1.x - p2.x;
+    }
+  }
