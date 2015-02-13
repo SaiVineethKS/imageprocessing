@@ -4,19 +4,22 @@ import processing.video.*;
 import java.awt.Point;
 import java.awt.Rectangle;
 import processing.net.*; 
+import ipcapture.*;
 import java.util.Arrays;
 
-ArrayList<Contour> contours;
-ArrayList<Contour> polygons;
-ArrayList<Line> lines;
-Client myClient; 
 PImage img;
+Client myClient; 
+IPCapture cam;
+
 OpenCV opencv;
 Histogram histogram;
 Capture video;
 int lowerb = 105;//18 
 int upperb = 115;//55 //124
 float angles[] = new float[5];
+ArrayList<Contour> polygons;
+ArrayList<Line> lines;
+ArrayList<Contour> contours;
 
 PImage ncc(PImage img){
   img.loadPixels();
@@ -90,15 +93,19 @@ void setup() {
   opencv = new OpenCV(this, video.width, video.height);
   size(opencv.width, opencv.height);
   opencv.useColor(HSB);
-  video.start();
+  //video.start();
+  cam = new IPCapture(this, "http://10.22.30.11/mjpg/video.mjpg", "FRC", "FRC");
+  cam.start();
 }
 
 void draw() {
   
-  if (video.available()) {
+  if (cam.isAvailable()) {
     background(100);
-    video.read();
-  img = ncc(video);
+    cam.read();
+    cam.resize(640, 480);
+    //video.read();
+  img = ncc(cam);
   // <2> Load the new frame of our movie in to OpenCV
   opencv.loadImage(img);
   //opencv.loadImage(img);
@@ -118,13 +125,13 @@ void draw() {
   opencv.dilate();
   opencv.dilate();
   opencv.dilate();
-  
-  
-  //deleteNoise(opencv.getOutput());
-  opencv.loadImage(removeNoise(deleteNoise(opencv.getOutput())));//DIFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+  try{
+   opencv.loadImage(removeNoise(deleteNoise(opencv.getOutput())));//DIFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+  }
+  catch(NullPointerException npe){
+  }
   image(img, 0, 0);
   image(opencv.getOutput(), 3*width/4, 3*height/4, width/4,height/4);
-  
   contours = opencv.findContours();
   //Point[] points = new Point()[counters.legnth*2]
   int numOfPoints = 0;
@@ -278,7 +285,7 @@ void mousePressed() {
     //color c = get(mouseX, mouseY);
     color c = img.get(mouseX, mouseY);
     int hue = int(map(hue(c), 0, 255, 0, 180));
-    int range = 12;
+    int range = 2;
     upperb = hue+range;
     lowerb = hue-range;
 }
@@ -580,14 +587,31 @@ void calculateData(Point[] p){
    minY = min(minY, p[i].y);
   }
   float distance = 10404*pow(maxY-minY, -0.88);
+  fill(255, 255, 0);
   text("Distance " + distance, 20, 40);
+  
+  /*int numOfPoints = 0;
   for(int i = 0; i<p.length;i++){
     if(p[i].y < (maxY-minY)/2){
-      
+      numOfPoints++;
     }
   }
+  int isStraight = 0;
+   if(numOfPoints == 2){
+    isStraight = 1; 
+   }
+   text("Straight " + isStraight, 20, 80);*/
+  int maxX = 0;
+  int minX = width;
+  for(int i = 0; i < p.length; i++){
+   maxX = max(maxX, p[i].x);
+   minX = min(minX, p[i].x);
+  }
+  float middle = (maxX+minX)/2;
+  float x = map(width/2-middle, -width/2, width/2, -100, 100);
+  text("X " + x, 20, 120);
+  
 }
-
 
 
 
@@ -654,6 +678,7 @@ PImage deleteNoise(PImage pi)
     int py = i / img.width;
     int px = i % img.width;
     
+    
     if(!(rect.contains(new Point(px,py)))){ 
       pi.pixels[i] = color(0, 0, 0);//Processed result !!!!! (!!!)
     }
@@ -674,3 +699,6 @@ PImage deleteNoise(PImage pi)
   return pi;
   //return new Point(x + highx , y + highy);
 }
+
+
+
