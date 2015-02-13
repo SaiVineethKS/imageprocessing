@@ -114,10 +114,11 @@ void draw() {
   opencv.threshold(230);//230
   opencv.dilate();
   opencv.dilate();
-  opencv.dilate();//wtf
+  opencv.dilate();//WTF
   opencv.dilate();
   opencv.dilate();
   opencv.dilate();
+  opencv.loadImage(removeNoise(opencv.getOutput()));
   image(img, 0, 0);
   image(opencv.getOutput(), 3*width/4, 3*height/4, width/4,height/4);
   contours = opencv.findContours();
@@ -131,7 +132,7 @@ void draw() {
     beginShape();
     for (PVector point : contour.getPolygonApproximation().getPoints()) {
       numOfPoints++;
-      vertex(point.x, point.y);
+      //vertex(point.x, point.y);
     }
     endShape();
   }
@@ -151,6 +152,8 @@ void draw() {
     //endShape();
   }
   points = convexHull(points);
+  //println(points.length);
+  calculateData(points);
   stroke(255, 255, 0);
   beginShape();
   for(int i = 0; i<points.length; i++){
@@ -271,7 +274,7 @@ void mousePressed() {
     //color c = get(mouseX, mouseY);
     color c = img.get(mouseX, mouseY);
     int hue = int(map(hue(c), 0, 255, 0, 180));
-    int range = 9;
+    int range = 12;
     upperb = hue+range;
     lowerb = hue-range;
 }
@@ -318,7 +321,7 @@ void drawLines(){
     //println(distance);
     
   }
-  text("Distance " + distance, 20, 40);
+  //text("Distance " + distance, 20, 40);distance = 10404*pow(heightOfTote, -0.88);
     send =distance + " ";
   if(twidth != null && theight != null)
   for(Line line: lines){
@@ -379,28 +382,28 @@ void drawLines(){
       }
    } 
   }
-  text("Angle " + angle, 20, 80);
+  //text("Angle " + angle, 20, 80);
   send+=angle + " ";
   float x = -1;
   if(twidth != null){
     x = map(width/2-middle(twidth).x, -width/2, width/2, -100, 100);
   }
-  text("Distance from center " + x, 20, 120);
+  //text("Distance from center " + x, 20, 120);
   send+=x;
-  println(send);
+  //println(send);
   myClient.write(send); 
   //draw
   if(twidth != null){
     stroke(255, 0, 0);
     //println(degrees((float)twidth.angle));
-    line(twidth.start.x, twidth.start.y, twidth.end.x, twidth.end.y);
+    //line(twidth.start.x, twidth.start.y, twidth.end.x, twidth.end.y);
   }
   
   if(tside != null){
     stroke(0, 0, 255);
     //println(degrees((float)tside.angle));
     //println(errorAngle(degrees((float)twidth.angle), degrees((float)tside.angle)));
-    line(tside.start.x, tside.start.y, tside.end.x, tside.end.y);
+    //line(tside.start.x, tside.start.y, tside.end.x, tside.end.y);
   }
   
   if(theight != null){
@@ -408,7 +411,7 @@ void drawLines(){
     //println(degrees((float)theight.angle));
     
     //println(errorAngle(degrees((float)theight.angle), 0));
-    line(theight.start.x, theight.start.y, theight.end.x, theight.end.y);
+    //line(theight.start.x, theight.start.y, theight.end.x, theight.end.y);
   }
   //println(send);
 }
@@ -466,7 +469,7 @@ int cross(Point O, Point A, Point B) {
   }
   
 Point[] convexHull(Point[] P) {
-   println(P.length);
+   //println(P.length);
     if (P.length > 1) {
       int n = P.length, k = 0;
       Point[] H = new Point[2 * n];
@@ -518,3 +521,65 @@ int compareTo(Point p1, Point p2) {
       return p1.x - p2.x;
     }
   }
+  
+PImage subtract(PImage i1, PImage i2){
+  i1.loadPixels();
+  i2.loadPixels();
+  PImage out = createImage(i1.width, i1.height, RGB);
+  out.loadPixels();
+  for(int i = 0; i < i1.width*i1.height; i++){
+    color c1 = i1.pixels[i];
+    color c2 = i2.pixels[i];
+    if(abs(red(c1)-red(c2)) + abs(green(c1)-green(c2)) + abs(blue(c1)-blue(c2)) > 1) out.pixels[i] = color(255, 255, 255);
+    else out.pixels[i] = color(0 , 0, 0);
+    //out.pixels[i] = color(abs(red(c1)-red(c2)), abs(green(c1)-green(c2)), abs(blue(c1)-blue(c2)));
+}
+  
+  out.updatePixels();
+  return out;
+}
+PImage removeNoise(PImage img){
+  img.loadPixels();
+  //PImage out = createImage(img.width, img.height, RGB);
+  //out.loadPixels();
+  float avgImage = 0;
+  for(int i = 0; i < img.width*img.height;i++){
+    color c = img.pixels[i];
+   avgImage+= red(c)+green(c)+blue(c);
+  }
+  avgImage /= 3 * img.width*img.height;
+  for(int j = 0; j < img.width; j++){
+    float avg = 0;
+  for(int i = 0; i < img.height; i++){
+    color c = img.pixels[j+i*img.width];
+    avg += red(c)+green(c)+blue(c);
+  }
+  avg/= 3*img.height;
+  if(avg<avgImage*0.98){
+    for(int i = 0; i < img.height; i++){
+    img.pixels[j+i*img.width] = color(0, 0, 0);
+  }
+  
+  }
+  //println("avg dofsfoi" + avg);
+  }
+  //println("avg dofsfoi" + avg);
+  img.updatePixels();
+  return img;
+}
+
+void calculateData(Point[] p){
+  int maxY = 0;
+  int minY = height;
+  for(int i = 0; i < p.length; i++){
+   maxY = max(maxY, p[i].y);
+   minY = min(minY, p[i].y);
+  }
+  float distance = 10404*pow(maxY-minY, -0.88);
+  text("Distance " + distance, 20, 40);
+  for(int i = 0; i<p.length;i++){
+    if(p[i].y < (maxY-minY)/2){
+      
+    }
+  }
+}
