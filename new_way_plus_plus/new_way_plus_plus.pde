@@ -102,7 +102,13 @@ void draw() {
   
   if (cam.isAvailable()) {
     background(100);
+    try{
     cam.read();
+    }
+    catch(Exception e){
+      println("no feed");
+      return;
+     } 
     cam.resize(640, 480);
     //video.read();
   img = ncc(cam);
@@ -672,7 +678,9 @@ Rectangle getBounds(PImage pi,float ratio) { //Return rectangle with edges of to
 //PImage removeNoise(PImage img){
 PImage deleteNoise(PImage pi)
 {
-  Rectangle rect = getBounds(img,0.1);
+  final float range = -0.1;
+  
+  Rectangle rect = getBounds(img,range);
   for(int i = 0; i<img.width*img.height; i++)
   {
     
