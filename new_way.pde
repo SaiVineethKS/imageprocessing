@@ -576,10 +576,26 @@ void calculateData(Point[] p){
    minY = min(minY, p[i].y);
   }
   float distance = 10404*pow(maxY-minY, -0.88);
+  fill(255, 255, 0);
   text("Distance " + distance, 20, 40);
+  int numOfPoints = 0;
   for(int i = 0; i<p.length;i++){
     if(p[i].y < (maxY-minY)/2){
-      
+      numOfPoints++;
     }
   }
+  int isStraight = 0;
+   if(numOfPoints == 2){
+    isStraight = 1; 
+   }
+   text("Straight " + isStraight, 20, 80);
+  int maxX = 0;
+  int minX = width;
+  for(int i = 0; i < p.length; i++){
+   maxX = max(maxX, p[i].x);
+   minX = min(minX, p[i].x);
+  }
+  float middle = (maxX+minX)/2;
+  float x = map(width/2-middle, -width/2, width/2, -100, 100);
+  text("X " + x, 20, 120);
 }
