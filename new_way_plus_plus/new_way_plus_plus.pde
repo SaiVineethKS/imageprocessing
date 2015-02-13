@@ -601,8 +601,8 @@ void calculateData(Point[] p){
     isStraight = 1; 
    }
    text("Straight " + isStraight, 20, 80);*/
-  int maxX = 0;
-  int minX = width;
+  float maxX = 0;
+  float minX = width;
   for(int i = 0; i < p.length; i++){
    maxX = max(maxX, p[i].x);
    minX = min(minX, p[i].x);
@@ -610,7 +610,10 @@ void calculateData(Point[] p){
   float middle = (maxX+minX)/2;
   float x = map(width/2-middle, -width/2, width/2, -100, 100);
   text("X " + x, 20, 120);
-  
+  float relation = (maxX-minX)/(maxY-minY);
+  float isStraight = 0;
+  if(relation < 1.4) isStraight = 1;
+  text("Straight " + isStraight, 20, 80);
 }
 
 
