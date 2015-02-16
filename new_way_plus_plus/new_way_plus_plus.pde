@@ -1,3 +1,10 @@
+//calculateOpticalFlow
+
+/*
+Threshold a bit lower improved some stuff so yahhhh....
+Straight is not accurate.
+*/
+
 //This is the code for the image processing
 import gab.opencv.*;
 import processing.video.*;
@@ -21,68 +28,7 @@ ArrayList<Contour> polygons;
 ArrayList<Line> lines;
 ArrayList<Contour> contours;
 
-PImage ncc(PImage img){
-  img.loadPixels();
-  
-  float avgR = 0;
-  float avgG = 0;
-  float avgB = 0;
-  for(int i =0; i < img.width * img.height; i++){
-   color c = img.pixels[i];
-   float red = red(c);
-   float green = green(c);
-   float blue = blue(c);
-   avgR+=red;
-   avgG+=green;
-   avgB+=blue;  
-  }
-  avgR/=img.width * img.height;
-  avgG/=img.width * img.height;
-  avgB/=img.width * img.height;
-  float stdR = 0;
-  float stdG = 0;
-  float stdB = 0;
-  for(int i =0; i < img.width * img.height; i++){
-    color c = img.pixels[i];
-   float red = red(c);
-   float green = green(c);
-   float blue = blue(c);
-   stdR += (red-avgR)*(red-avgR);
-   stdG += (green-avgG)*(green-avgG);
-   stdB += (blue-avgB)*(blue-avgB);
-  }
-  stdR/=(img.width * img.height)*(img.width * img.height);
-  stdG/=(img.width * img.height)*(img.width * img.height);
-  stdB/=(img.width * img.height)*(img.width * img.height);
-  PImage result = createImage(img.width, img.height, RGB);
-  float minR = 255, maxR = -255;
-  float minG = 255, maxG = -255;
-  float minB = 255, maxB = -255;
-  for(int i =0; i < img.width * img.height; i++){
-    color c = img.pixels[i];
-   float red = (red(c)-avgR)/stdR;
-   float green = (green(c)-avgG)/stdG;
-   float blue = (blue(c)-avgB)/stdB;
-   minR = min(minR, red);
-     maxR = max(maxR, red);
-     minG = min(minG, red);
-     maxG = max(maxG, red);
-     minB = min(minB, red);
-     maxB = max(maxB, red);
-  }
-  for(int i =0; i < img.width * img.height; i++){
-    color c = img.pixels[i];
-   float red = (red(c)-avgR)/stdR;
-   float green = (green(c)-avgG)/stdG;
-   float blue = (blue(c)-avgB)/stdB;
-   float newR = map(red, minR, maxR, 0, 255);
-   float newG = map(green, minG, maxG, 0, 255);
-   float newB = map(blue, minB, maxB, 0, 255);
-    result.pixels[i] = color(newR, newG, newB);
-  }
-  result.updatePixels();
-  return result;
-}
+
 
 void setup() {
   myClient = new Client(this, "localhost", 5204); 
@@ -123,14 +69,18 @@ void draw() {
   opencv.setGray(opencv.getH().clone());
   opencv.inRange(lowerb, upperb);
   
-  opencv.blur(12);
-  opencv.threshold(230);//230
-  opencv.dilate();
-  opencv.dilate();
-  opencv.dilate();//WTF
-  opencv.dilate();
-  opencv.dilate();
-  opencv.dilate();
+  //filters
+  opencv.blur(12);//12
+  opencv.threshold(200);//230
+  
+  final int howmanydilate = 10; //wooohooo
+  
+  for(int i = 0; i<howmanydilate; i++)
+  {
+    opencv.dilate();
+  }
+  
+  
   try{
    opencv.loadImage(removeNoise(deleteNoise(opencv.getOutput())));//DIFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
   }
@@ -172,11 +122,15 @@ void draw() {
   //println(points.length);
   calculateData(points);
   stroke(255, 255, 0);
+  
+  //Draw the polygon based on the points
   beginShape();
   for(int i = 0; i<points.length; i++){
     vertex(points[i].x, points[i].y);
   }
   endShape();
+  //Draw polygon until here
+  
   opencv.findCannyEdges(2,10);//edge
   
     opencv.blur(2);//These clean 
@@ -240,6 +194,10 @@ void draw() {
     drawHistogram();
     drawLines();
     
+    //println(opencv.hasFlow);
+    
+    
+    
   }
   }
   
@@ -291,7 +249,7 @@ void mousePressed() {
     //color c = get(mouseX, mouseY);
     color c = img.get(mouseX, mouseY);
     int hue = int(map(hue(c), 0, 255, 0, 180));
-    int range = 2;
+    int range = 7;
     upperb = hue+range;
     lowerb = hue-range;
 }
@@ -619,7 +577,7 @@ void calculateData(Point[] p){
   float relation = (maxX-minX)/(maxY-minY);
   float isStraight = 0;
   if(relation < 1.4) isStraight = 1;
-  text("Straight " + isStraight, 20, 80);
+  text("Relation " + relation, 20, 80);
 }
 
 
@@ -676,9 +634,8 @@ Rectangle getBounds(PImage pi,float ratio) { //Return rectangle with edges of to
 
 
 //PImage removeNoise(PImage img){
-PImage deleteNoise(PImage pi)
-{
-  final float range = -0.1;
+PImage deleteNoise(PImage pi) {
+  final float range = -0.15;//of rect width
   
   Rectangle rect = getBounds(img,range);
   for(int i = 0; i<img.width*img.height; i++)
@@ -711,5 +668,68 @@ PImage deleteNoise(PImage pi)
   //return new Point(x + highx , y + highy);
 }
 
+//Until here extras
 
+PImage ncc(PImage img){
+  img.loadPixels();
+  
+  float avgR = 0;
+  float avgG = 0;
+  float avgB = 0;
+  for(int i =0; i < img.width * img.height; i++){
+   color c = img.pixels[i];
+   float red = red(c);
+   float green = green(c);
+   float blue = blue(c);
+   avgR+=red;
+   avgG+=green;
+   avgB+=blue;  
+  }
+  avgR/=img.width * img.height;
+  avgG/=img.width * img.height;
+  avgB/=img.width * img.height;
+  float stdR = 0;
+  float stdG = 0;
+  float stdB = 0;
+  for(int i =0; i < img.width * img.height; i++){
+    color c = img.pixels[i];
+   float red = red(c);
+   float green = green(c);
+   float blue = blue(c);
+   stdR += (red-avgR)*(red-avgR);
+   stdG += (green-avgG)*(green-avgG);
+   stdB += (blue-avgB)*(blue-avgB);
+  }
+  stdR/=(img.width * img.height)*(img.width * img.height);
+  stdG/=(img.width * img.height)*(img.width * img.height);
+  stdB/=(img.width * img.height)*(img.width * img.height);
+  PImage result = createImage(img.width, img.height, RGB);
+  float minR = 255, maxR = -255;
+  float minG = 255, maxG = -255;
+  float minB = 255, maxB = -255;
+  for(int i =0; i < img.width * img.height; i++){
+    color c = img.pixels[i];
+   float red = (red(c)-avgR)/stdR;
+   float green = (green(c)-avgG)/stdG;
+   float blue = (blue(c)-avgB)/stdB;
+   minR = min(minR, red);
+     maxR = max(maxR, red);
+     minG = min(minG, red);
+     maxG = max(maxG, red);
+     minB = min(minB, red);
+     maxB = max(maxB, red);
+  }
+  for(int i =0; i < img.width * img.height; i++){
+    color c = img.pixels[i];
+   float red = (red(c)-avgR)/stdR;
+   float green = (green(c)-avgG)/stdG;
+   float blue = (blue(c)-avgB)/stdB;
+   float newR = map(red, minR, maxR, 0, 255);
+   float newG = map(green, minG, maxG, 0, 255);
+   float newB = map(blue, minB, maxB, 0, 255);
+    result.pixels[i] = color(newR, newG, newB);
+  }
+  result.updatePixels();
+  return result;
+}
 
