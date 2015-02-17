@@ -31,8 +31,8 @@ ArrayList<Contour> contours;
 
 
 void setup() {
-  myClient = new Client(this, "localhost", 5204); 
-  frameRate(20);
+  myClient = new Client(this, "localhost", 5204);
+  frameRate(10);
   video = new Capture(this, 640, 480);
   img = loadImage("tote.jpg");
   //opencv = new OpenCV(this, img.width, img.height);
@@ -71,7 +71,7 @@ void draw() {
   
   //filters
   opencv.blur(12);//12
-  opencv.threshold(200);//230
+  opencv.threshold(215);//230
   
   final int howmanydilate = 10; //wooohooo
   
@@ -249,7 +249,7 @@ void mousePressed() {
     //color c = get(mouseX, mouseY);
     color c = img.get(mouseX, mouseY);
     int hue = int(map(hue(c), 0, 255, 0, 180));
-    int range = 7;
+    int range = 2;
     upperb = hue+range;
     lowerb = hue-range;
 }
@@ -297,7 +297,7 @@ void drawLines(){
     
   }
   //text("Distance " + distance, 20, 40);distance = 10404*pow(heightOfTote, -0.88);
-    send =distance + " ";
+    send =(int)distance + " ";
   if(twidth != null && theight != null)
   for(Line line: lines){
      if(abs(errorAngle(degrees((float)line.angle), degrees((float)twidth.angle))) > 15 && !inRange(errorAngle(degrees((float)line.angle),0) , -12, 12) && abs(middle(line).y-middle(twidth).y) < distance(theight)*0.9){
@@ -358,15 +358,15 @@ void drawLines(){
    } 
   }
   //text("Angle " + angle, 20, 80);
-  send+=angle + " ";
+  send+=(int)angle + " ";
   float x = -1;
   if(twidth != null){
     x = map(width/2-middle(twidth).x, -width/2, width/2, -100, 100);
   }
   //text("Distance from center " + x, 20, 120);
-  send+=x;
+  send+=int(x);
   //println(send);
-  myClient.write(send); 
+  
   //draw
   if(twidth != null){
     stroke(255, 0, 0);
@@ -544,6 +544,7 @@ PImage removeNoise(PImage img){
 }
 
 void calculateData(Point[] p){
+  String send = "";
   int maxY = 0;
   int minY = height;
   for(int i = 0; i < p.length; i++){
@@ -553,7 +554,7 @@ void calculateData(Point[] p){
   float distance = 10404*pow(maxY-minY, -0.88);
   fill(255, 255, 0);
   text("Distance " + distance, 20, 40);
-  
+  send = distance + " ";
   /*int numOfPoints = 0;
   for(int i = 0; i<p.length;i++){
     if(p[i].y < (maxY-minY)/2){
@@ -574,10 +575,23 @@ void calculateData(Point[] p){
   float middle = (maxX+minX)/2;
   float x = map(width/2-middle, -width/2, width/2, -100, 100);
   text("X " + x, 20, 120);
+  
+  
+  
   float relation = (maxX-minX)/(maxY-minY);
   float isStraight = 0;
   if(relation < 1.4) isStraight = 1;
   text("Relation " + relation, 20, 80);
+  
+  
+  //Here we send
+  send = distance + " ";
+  abs(1212);
+  send += relation*100 + " ";
+  send += x;
+  
+  println(send);
+  myClient.write(send); 
 }
 
 
